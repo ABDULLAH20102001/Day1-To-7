@@ -1,5 +1,3 @@
-
-
 import React from 'react';
 import { client } from '@/sanity/lib/client';
 
@@ -12,14 +10,14 @@ interface Product {
   discountPercentage: number;
   stockLevel: number;
   category: string;
-  slug: { current: string };
+  slug: { current: string } | null; // slug null ہو سکتا ہے
   imageUrl: string;
 }
 
 // پروڈکٹ پیج کمپوننٹ
 export default async function ProductPage({ params }: { params: { product: string } }) {
-  // params کو await کریں تاکہ آپ کو صحیح product مل سکے
-  const { product } = await params;
+  // params کو await کریں
+  const { product } = await params;  // یہاں params کو await کیا گیا ہے
 
   // سرور سائیڈ پر ڈیٹا حاصل کریں
   const data: Product[] = await client.fetch(
@@ -37,7 +35,7 @@ export default async function ProductPage({ params }: { params: { product: strin
   );
 
   // پروڈکٹ کو slug کے مطابق تلاش کریں
-  const filteredData = data.find((item: Product) => item.slug.current === product);
+  const filteredData = data.find((item: Product) => item.slug?.current === product);
 
   if (!filteredData) {
     return <div className="text-center text-xl text-red-500">پروڈکٹ نہیں ملی</div>;
@@ -69,4 +67,20 @@ export default async function ProductPage({ params }: { params: { product: strin
       </div>
     </div>
   );
+}
+
+// ڈائنامک روٹس کے لیے `generateStaticParams` کا استعمال
+export async function generateStaticParams() {
+  const data: Product[] = await client.fetch(
+    `*[_type == "product" && isFeaturedProduct == true] {
+      slug { current }
+    }`
+  );
+
+  // slug null نہ ہو، اس بات کو یقینی بنائیں
+  return data
+    .filter((item) => item.slug?.current) // صرف وہ آئٹمز جن میں slug.current موجود ہو
+    .map((item) => ({
+      product: item.slug!.current, // ! کا استعمال کرتے ہوئے یقینی بنائیں کہ slug.current موجود ہے
+    }));
 }
